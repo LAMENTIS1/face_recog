@@ -60,7 +60,7 @@ async function start() {
 
 // Load labeled face images and create descriptors for face recognition
 function loadLabeledImages() {
-  const labels = ['Black Widow', 'Captain America', 'Captain Marvel', 'Hawkeye', 'Jim Rhodes', 'Thor', 'Tony Stark','vatsav']
+  const labels = ['Black Widow', 'Captain America', 'Captain Marvel', 'Hawkeye', 'Jim Rhodes', 'Thor', 'Tony Stark','vatsav','ashwini','vijay_ps','aswin_m']
   return Promise.all(
     labels.map(async label => {
       const descriptions = []
