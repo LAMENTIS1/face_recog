@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mobius Play-Eyes Animation</title>
+    <style>
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: black;
+            overflow: hidden;
+            touch-action: none; /* Prevents default touch actions */
+        }
+        
+        .logo {
+            position: absolute;
+            top: 1rem;
+            left: 1rem;
+            color: #00FFFF;
+            font-family: sans-serif;
+            font-size: 1.5rem;
+            font-weight: bold;
+            letter-spacing: 0.1em;
+            z-index: 200;
+        }
+        
+        .container {
+            position: relative;
+            width: 200px;
+            height: 200px;
+            z-index: 50;
+        }
+        
+        #toggle {
+            display: none;
+        }
+        
+        /* Long Press Indicator */
+        .longpress-indicator {
+            position: fixed;
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            border: 3px solid #00FFFF;
+            pointer-events: none;
+            opacity: 0;
+            z-index: 150;
+            transition: opacity 0.2s ease;
+        }
+        
+        .longpress-indicator.active {
+            opacity: 1;
+            animation: longpress-progress 1.5s linear forwards;
+        }
+        
+        @keyframes longpress-progress {
+            from { background: radial-gradient(circle, transparent 65%, rgba(0, 255, 255, 0.5) 66%); }
+            to { background: radial-gradient(circle, rgba(0, 255, 255, 0.5) 0%, rgba(0, 255, 255, 0.5) 66%); }
+        }
+        
+        /* Play Button */
+        .play-button {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        #toggle:checked ~ .play-button {
+            transform: scale(0) rotate(90deg);
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        .play-wrapper {
+            position: relative;
+            width: 128px;
+            height: 128px;
+        }
+        
+        .play-glow {
+            position: absolute;
+            inset: -16px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(0, 255, 255, 0.2) 0%, transparent 70%);
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.1); }
+        }
+        
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-1px, 0, 0); }
+            20%, 80% { transform: translate3d(2px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+            40%, 60% { transform: translate3d(4px, 0, 0); }
+        }
+        
+        .play-outer {
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            background: rgba(0, 255, 255, 0.1);
+            backdrop-filter: blur(8px);
+            transition: background 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .play-button:hover .play-outer {
+            background: rgba(0, 255, 255, 0.2);
+        }
+        
+        .play-inner {
+            position: absolute;
+            inset: 16px;
+            border-radius: 50%;
+            background: #00FFFF;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .play-button:hover .play-inner {
+            transform: scale(0.95);
+        }
+        
+        .play-button:active .play-inner {
+            transform: scale(0.9);
+        }
+        
+        .play-icon {
+            width: 0;
+            height: 0;
+            margin-left: 8px;
+            border-style: solid;
+            border-width: 20px 0 20px 32px;
+            border-color: transparent transparent transparent black;
+        }
+        
+        /* Eyes */
+        .eyes {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transform: scale(0) rotate(-90deg);
+            opacity: 0;
+            cursor: pointer;
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        #toggle:checked ~ .eyes {
+            transform: scale(1) rotate(0);
+            opacity: 1;
+        }
+        
+        .eyes-wrapper {
+            display: flex;
+            gap: 1rem;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .eyes:hover .eyes-wrapper {
+            transform: scale(1.05);
+        }
+        
+        .eye {
+            width: 1.75rem;
+            height: 6rem;
+            background: #00FFFF;
+            border-radius: 1.5rem;
+            box-shadow: 
+                0 0 20px rgba(0, 255, 255, 0.7),
+                0 0 40px rgba(0, 255, 255, 0.5),
+                0 0 60px rgba(0, 255, 255, 0.3),
+                inset 0 0 15px rgba(255, 255, 255, 0.2);
+            transition: all 100ms ease-in-out;
+        }
+        
+        .emotion-blinking { 
+            transform: scaleY(0.2);
+            transform-origin: center;
+        }
+        
+        .emotion-thinking { 
+            animation: pulse 1.5s infinite; 
+        }
+        
+        /* Audio visualization */
+        .listening-container {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.5s ease;
+        }
+        
+        .listening-container.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        
+        .audio-bar {
+            width: 0.75rem;
+            height: 4rem;
+            background-color: #00FFFF;
+            border-radius: 1rem;
+            box-shadow: 
+                0 0 20px rgba(0, 255, 255, 0.7),
+                0 0 40px rgba(0, 255, 255, 0.5),
+                0 0 60px rgba(0, 255, 255, 0.3);
+            transition: height 0.12s ease;
+            transform-origin: bottom;
+        }
+        
+        .button-container {
+            position: absolute;
+            bottom: -200px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 0.75rem;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        #toggle:checked ~ .button-container {
+            opacity: 1;
+        }
+        
+        .emotion-btn {
+            background-color: rgba(0, 255, 255, 0.1);
+            color: #00FFFF;
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            backdrop-filter: blur(10px);
+            transition: all 100ms ease;
+            text-transform: uppercase;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            z-index: 110;
+        }
+        
+        .emotion-btn:hover {
+            background-color: rgba(0, 255, 255, 0.2);
+            border-color: rgba(0, 255, 255, 0.5);
+        }
+        
+        .recording-indicator {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            width: 1rem;
+            height: 1rem;
+            background-color: #FF3333;
+            border-radius: 50%;
+            box-shadow: 0 0 15px rgba(255, 51, 51, 0.7);
+            animation: pulse 1.5s infinite;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            z-index: 200;
+        }
+        
+        .recording-indicator.active {
+            opacity: 1;
+        }
+        
+        /* Transcript Container */
+        #transcript-container {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80%;
+            max-width: 600px;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: #00FFFF;
+            padding: 15px;
+            border-radius: 10px;
+            font-family: sans-serif;
+            z-index: 100;
+            transition: opacity 0.3s ease;
+            backdrop-filter: blur(10px);
+            opacity: 0;
+        }
+        
+        #transcript-title {
+            margin-bottom: 10px;
+            font-size: 14px;
+            opacity: 0.7;
+        }
+        
+        #transcript-text {
+            font-size: 18px;
+            min-height: 24px;
+        }
+
+        /* Hidden face recognition elements */
+        #faceVideo {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            opacity: 0;
+            pointer-events: none;
+            overflow: hidden;
+        }
+
+        /* Loading spinner for face recognition */
+        .face-loading {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: #00FFFF;
+            padding: 8px 12px;
+            border-radius: 5px;
+            font-size: 12px;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+        }
+
+        .face-spinner {
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #00FFFF;
+            border-radius: 50%;
+            width: 12px;
+            height: 12px;
+            animation: spin 2s linear infinite;
+            margin-right: 8px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Face recognition result display */
+        #faceRecognitionResult {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: #00FFFF;
+            padding: 8px 12px;
+            border-radius: 5px;
+            font-size: 14px;
+            z-index: 100;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        #faceRecognitionResult.visible {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="logo">MOBIUS</div>
+    <div id="recordingIndicator" class="recording-indicator"></div>
+    <div id="longpressIndicator" class="longpress-indicator"></div>
+    
+    <!-- Mobius UI -->
+    <div class="container">
+        <input type="checkbox" id="toggle">
+
+        <label class="play-button" for="toggle">
+            <div class="play-wrapper">
+                <div class="play-glow"></div>
+                <div class="play-outer"></div>
+                <div class="play-inner">
+                    <div class="play-icon"></div>
+                </div>
+            </div>
+        </label>
+
+        <label class="eyes" for="toggle">
+            <div class="eyes-wrapper">
+                <div id="leftEye" class="eye"></div>
+                <div id="rightEye" class="eye"></div>
+            </div>
+        </label>
+
+        <div id="listeningContainer" class="listening-container">
+            <div class="audio-bar" id="bar1"></div>
+            <div class="audio-bar" id="bar2"></div>
+            <div class="audio-bar" id="bar3"></div>
+            <div class="audio-bar" id="bar4"></div>
+            <div class="audio-bar" id="bar5"></div>
+            <div class="audio-bar" id="bar6"></div>
+            <div class="audio-bar" id="bar7"></div>
+        </div>
+
+        <div class="button-container">
+            <button onclick="setEmotion('default')" class="emotion-btn">Default</button>
+            <button onclick="setEmotion('listening')" class="emotion-btn">Listening</button>
+            <button onclick="setEmotion('thinking')" class="emotion-btn">Thinking</button>
+            <button onclick="setEmotion('blinking')" class="emotion-btn">Blinking</button>
+        </div>
+    </div>
+
+    <div id="transcript-container">
+        <div id="transcript-title">Transcript</div>
+        <div id="transcript-text"></div>
+    </div>
+
+    <!-- Hidden Face Recognition Elements -->
+    <video id="faceVideo" width="720" height="560" autoplay muted></video>
+    <div id="faceLoading" class="face-loading">
+        <div class="face-spinner"></div>
+        Loading face models...
+    </div>
+    <div id="faceRecognitionResult"></div>
+
+    <!-- Mediapipe Face Mesh for Mobius -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
+    
+    <!-- Face API for Face Recognition -->
+    <script src="face-api.min.js"></script>
+    
+    <script>
+        // Mobius UI functionality
+        const videoElement = document.createElement('video');
+        videoElement.autoplay = true;
+        videoElement.playsInline = true;
+
+        const faceMesh = new FaceMesh({
+            locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`
+        });
+        faceMesh.onResults(onFaceMeshResults);
+
+        async function initCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                videoElement.srcObject = stream;
+                videoElement.onloadedmetadata = () => {
+                    const camera = new Camera(videoElement, {
+                        onFrame: async () => {
+                            await faceMesh.send({ image: videoElement });
+                        },
+                        width: 640,
+                        height: 480
+                    });
+                    camera.start();
+                };
+            } catch (error) {
+                console.error('Error accessing the camera:', error);
+            }
+        }
+        initCamera();
+
+        function onFaceMeshResults(results) {
+            if (results.multiFaceLandmarks) {
+                results.multiFaceLandmarks.forEach(landmarks => {
+                    const keypoints = landmarks.map(landmark => ({
+                        x: landmark.x * videoElement.videoWidth,
+                        y: landmark.y * videoElement.videoHeight
+                    }));
+
+                    const centerX = keypoints.reduce((sum, point) => sum + point.x, 0) / keypoints.length;
+                    const centerY = keypoints.reduce((sum, point) => sum + point.y, 0) / keypoints.length;
+                    // Flip the X direction by adding a negative sign
+                    const normalizedX = (-((centerX / videoElement.videoWidth) - 0.5) * 20).toFixed(0);
+                    const normalizedY = (((centerY / videoElement.videoHeight) - 0.5) * 20).toFixed(0);
+
+                    moveEyes(normalizedX, normalizedY);
+                });
+            }
+        }
+
+        function moveEyes(x, y) {
+            const maxMovementX = 20;
+            const maxMovementY = 20;
+
+            const leftEye = document.getElementById('leftEye');
+            const rightEye = document.getElementById('rightEye');
+
+            leftEye.style.transform = `translate(${x * maxMovementX}px, ${y * maxMovementY}px)`;
+            rightEye.style.transform = `translate(${x * maxMovementX}px, ${y * maxMovementY}px)`;
+        }
+
+        function setEmotion(emotion) {
+            const leftEye = document.getElementById('leftEye');
+            const rightEye = document.getElementById('rightEye');
+            const listeningContainer = document.getElementById('listeningContainer');
+            
+            // Reset all styles first
+            leftEye.classList.remove('emotion-blinking', 'emotion-thinking');
+            rightEye.classList.remove('emotion-blinking', 'emotion-thinking');
+            listeningContainer.classList.remove('active');
+            
+            // Apply the selected emotion
+            switch(emotion) {
+                case 'blinking':
+                    leftEye.classList.add('emotion-blinking');
+                    rightEye.classList.add('emotion-blinking');
+                    break;
+                case 'thinking':
+                    leftEye.classList.add('emotion-thinking');
+                    rightEye.classList.add('emotion-thinking');
+                    break;
+                case 'listening':
+                    listeningContainer.classList.add('active');
+                    animateAudioBars();
+                    break;
+                default:
+                    // Default state - no additional classes
+                    break;
+            }
+        }
+        
+        function animateAudioBars() {
+            if (!document.getElementById('listeningContainer').classList.contains('active')) return;
+            
+            const bars = Array.from(document.querySelectorAll('.audio-bar'));
+            
+            bars.forEach(bar => {
+                const height = Math.floor(Math.random() * 100) + 20;
+                bar.style.height = `${height}%`;
+            });
+            
+            setTimeout(animateAudioBars, 100);
+        }
+
+        // Face Recognition functionality
+        const video = document.getElementById('faceVideo');
+        const loadingElement = document.getElementById('faceLoading');
+        const resultElement = document.getElementById('faceRecognitionResult');
+
+        // Load face-api models
+        Promise.all([
+            faceapi.nets.faceRecognitionNet.loadFromUri('/models'),
+            faceapi.nets.faceLandmark68Net.loadFromUri('/models'),
+            faceapi.nets.ssdMobilenetv1.loadFromUri('/models')
+        ]).then(startFaceRecognition)
+        .catch(err => {
+            console.error('Error loading face-api models:', err);
+            loadingElement.textContent = 'Failed to load face models';
+            loadingElement.style.color = '#FF3333';
+        });
+
+        async function startFaceRecognition() {
+            // Hide loading element
+            loadingElement.style.display = 'none';
+            
+            const labeledFaceDescriptors = await loadLabeledImages();
+            const faceMatcher = new faceapi.FaceMatcher(labeledFaceDescriptors, 0.6);
+
+            try {
+                // Get camera access for face recognition
+                const videoStream = await navigator.mediaDevices.getUserMedia({ video: {} });
+                video.srcObject = videoStream;
+
+                video.onloadedmetadata = () => {
+                    video.play();
+                    detectFaces();
+                };
+            } catch (err) {
+                console.error('Error accessing camera for face recognition:', err);
+            }
+
+            async function detectFaces() {
+                // Create a canvas but don't append it to the document
+                const canvas = faceapi.createCanvasFromMedia(video);
+                const displaySize = { width: video.videoWidth, height: video.videoHeight };
+                canvas.width = displaySize.width;
+                canvas.height = displaySize.height;
+                faceapi.matchDimensions(canvas, displaySize);
+                
+                // Set interval to detect faces
+                setInterval(async () => {
+                    const detections = await faceapi.detectAllFaces(video)
+                        .withFaceLandmarks()
+                        .withFaceDescriptors();
+                    
+                    const resizedDetections = faceapi.resizeResults(detections, displaySize);
+                    const results = resizedDetections.map(d => faceMatcher.findBestMatch(d.descriptor));
+                    
+                    // Log the detected names to console
+                    results.forEach(result => {
+                        console.log('Detected: ' + result.toString());
+                        showDetectionResult(result.toString());
+                    });
+                    
+                    // If no faces detected
+                    if (results.length === 0) {
+                        resultElement.classList.remove('visible');
+                    }
+                }, 1000); // Check every second instead of 100ms to reduce processing load
+            }
+        }
+
+        function showDetectionResult(resultText) {
+            resultElement.textContent = resultText;
+            resultElement.classList.add('visible');
+            
+            // Hide the result after 3 seconds
+            setTimeout(() => {
+                resultElement.classList.remove('visible');
+            }, 3000);
+        }
+
+        // Load labeled face images and create descriptors
+        function loadLabeledImages() {
+            const labels = ['Black Widow', 'Captain America', 'Captain Marvel', 'Hawkeye', 'Jim Rhodes', 'Thor', 'Tony Stark', 'vatsav', 'ashwini', 'vijay_ps', 'aswin_m'];
+            
+            return Promise.all(
+                labels.map(async label => {
+                    const descriptions = [];
+                    
+                    try {
+                        for (let i = 1; i <= 2; i++) {
+                            const img = await faceapi.fetchImage(`https://raw.githubusercontent.com/LAMENTIS1/face_recog/master/labeled_images/${label}/${i}.jpg`);
+                            const detections = await faceapi.detectSingleFace(img).withFaceLandmarks().withFaceDescriptor();
+                            
+                            if (detections) {
+                                descriptions.push(detections.descriptor);
+                            }
+                        }
+                    } catch (error) {
+                        console.error(`Error loading images for ${label}:`, error);
+                    }
+                    
+                    if (descriptions.length > 0) {
+                        return new faceapi.LabeledFaceDescriptors(label, descriptions);
+                    }
+                })
+            ).then(descriptors => descriptors.filter(descriptor => descriptor !== undefined));
+        }
+
+
+ //this is where the greet function is called
+ 
+    </script>
+</body>
+</html>
